@@ -1,47 +1,51 @@
-# MIT License
+FROM alpine:latest
+MAINTAINER Raj Gaire <raj.gaire@data61.csiro.au>
+#  $ docker build . -t dataairlock/tensorflow-cpu-py3:alpine
+#  $ docker run --rm -it dataairlock/tensorflow-py3:alpine /bin/bash
 
-# Copyright (c) 2017 Juliano Petronetto
+# Install glibc and useful packages
+RUN echo "@testing http://nl.alpinelinux.org/alpine/latest-stable/main" >> /etc/apk/repositories \
+    && apk --update add \
+    bash \
+    curl \
+    ca-certificates \
+    libstdc++ \
+    glib \
+    libxext \
+    libxrender \
+    && curl "https://raw.githubusercontent.com/sgerrand/alpine-pkg-glibc/master/sgerrand.rsa.pub" -o /etc/apk/keys/sgerrand.rsa.pub \
+    && apk --no-cache add ca-certificates wget \
+    && wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub \
+    && wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.29-r0/glibc-2.29-r0.apk \
+    && apk add glibc-2.29-r0.apk \
+    && wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.29-r0/glibc-bin-2.29-r0.apk \
+    && apk add glibc-bin-2.29-r0.apk \
+    && /usr/glibc-compat/sbin/ldconfig /lib /usr/glibc/usr/lib \
+    && rm -rf glibc*apk /var/cache/apk/*
 
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
+# Create nbuser user with UID=1000 and in the 'users' group
+RUN mkdir -p /opt/conda && \
+    curl -L https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh  -o miniconda.sh && \
+    /bin/bash miniconda.sh -f -b -p /opt/conda && \
+    rm miniconda.sh && \
+    /opt/conda/bin/conda install --yes conda && \
+    ln -s /opt/conda/bin/conda /usr/bin/conda 
 
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
 
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE
+RUN conda create -n tensorflow_env tensorflow
 
-FROM petronetto/miniconda-alpine
+ENV PATH /opt/conda/envs/tensorflow_env/bin:$PATH
 
-MAINTAINER Juliano Petronetto <juliano.petronetto@gmail.com>
 
-RUN conda install -y scikit-learn pandas matplotlib seaborn jupyter python=3.6 && \
-    conda install -c conda-forge tensorflow python=3.6 --yes && \
-    conda clean --yes --all
 
-RUN ln -s /opt/conda/bin/jupyter /usr/bin/jupyter && \
-    mkdir -p /home/root/.jupyter && \
-    mkdir -p /notebooks
+RUN conda install -n tensorflow_env --yes scikit-learn scipy pandas matplotlib keras Pillow && \
+    conda clean --yes --all && \
+    rm -rf /var/cache/apk/*
 
-# Run notebook without token and disable warnings
-RUN echo " \n\
-import warnings \n\
-warnings.filterwarnings('ignore') \n\
-c.NotebookApp.token = u''" >> /home/root/.jupyter/config.py
+RUN conda init bash
+RUN cat ~/.bashrc
+RUN source ~/.bashrc
+# RUN conda activate tensorflow_env
 
-EXPOSE 8888
+RUN echo "conda activate tensorflow_env" >> ~/.bashrc
 
-COPY /notebooks /notebooks
-
-WORKDIR /notebooks
-
-CMD ["jupyter", "notebook", "--port=8888", "--no-browser", "--allow-root", "--ip=0.0.0.0", "--NotebookApp.token="]
