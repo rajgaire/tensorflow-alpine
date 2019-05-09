@@ -1,5 +1,3 @@
-# DEPRECATED IN FAVOUR OF https://github.com/petronetto/docker-python-deep-learning
-
 # TensorFlow Alpine
 
 [![](https://images.microbadger.com/badges/image/petronetto/tensorflow-alpine.svg)](https://microbadger.com/images/petronetto/tensorflow-alpine "Get your own image badge on microbadger.com")
@@ -13,13 +11,6 @@ TensorFlow in Alpine Linux
 
 ## Running the container
 
-Run `docker run -it -p 8888:8888 petronetto/tensorflow-alpine`  
-
-Open your browser in http://localhost:8888  
-
-## Keras
-
-Alson you can run `docker run -it -p 8888:8888 petronetto/tensorflow-alpine:keras` to container with Keras.  
-
+Run `docker run -it -d rajgaire/tensorflow-cpu:alpine`  
 
 Enjoy :)
